@@ -101,21 +101,24 @@ public struct Schedule {
     
     /// Today's date
     let now = Date()
+	
+	/// Instant Date if applicable
+	let instantDate : Date?
+	
+	var instant : Bool {
+		get { return (instantDate == nil) ? false : true }
+	}
     
     /// Calculated or set value
 	var periodBound : PeriodBound?
     
     /// Slots available for PRO Measurement
 	var slots : [Slot]?
-    
-    
-    /// number of slots
-    var slotCount : Int {
-        get  {
-            if let slots = slots { return slots.count }
-            else { return  0 }
-        }
-    }
+	
+	
+	var slotCount : Int? {
+		get { return slots?.count }
+	}
     
     
     /// Frequency of a repeating measurement
@@ -161,23 +164,22 @@ public struct Schedule {
 			return nil
 		}
 	}
-	
-	
-	
-	
-	
-    
-    
-    /// Measurement is instant if no repeating schedule available
-    var instant = false
-    
+
     
     init(period: PeriodBound, freq: Frequency) {
-        self.instant = false
         self.periodBound = period
         self.frequency = freq
+		self.instantDate = nil
 		self.slots = configureSlots()
+
     }
+	
+	init(dueDate: Date) {
+		self.instantDate = dueDate
+		self.periodBound = nil
+		self.frequency = nil
+		
+	}
 	
 	
 	
@@ -189,15 +191,10 @@ public struct Schedule {
 			return nil
 		}
 		
-		var periodComponents = DateComponents()
-		periodComponents.day = (frequency.unitDays - 1)
 		
-		
-        
         var slotCount : Int? {
             get {
-
-                    let differenceComponents = calendar.dateComponents([.day], from: start, to:end)
+                    let differenceComponents = calendar.dateComponents([.day], from: period.start, to: period.end)
                     return (differenceComponents.day! / frequency.unitDays)
             }
         }

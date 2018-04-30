@@ -51,4 +51,13 @@ print(sc.nextSlot)
 
 print("===")
 print(sc.previousSlot)
+print(sc.instant)
+
+
+
+
+let si = Schedule(dueDate: Date())
+
+print(si)
+print(si.instant)
 
