@@ -63,7 +63,7 @@ public struct PeriodBound : Equatable {
 
 
 public struct Frequency {
-    let value   : Int64
+    let value   : Int
     let unit    : String
     // convert to granular period (F)
     
@@ -76,6 +76,7 @@ public struct Slot {
     
     let period : PeriodBound
     let status : SlotStatus = .unknown
+    var current: Bool = false
     
     init(period: PeriodBound) {
         self.period = period
@@ -126,6 +127,21 @@ public struct Schedule {
         self.period = period
         self.frequency = freq
         self.slots = nil
+        
+        
+    }
+    
+    private func configureSlots() {
+        
+        var  periodComponents : DateComponents {
+            get {
+                var pComponents = DateComponents()
+                pComponents.day = (frequency!.value - 1)
+                return pComponents
+            }
+        }
+        
+        
     }
     
     
