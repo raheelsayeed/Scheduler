@@ -8,7 +8,6 @@
 
 import Foundation
 
-var str = "Hello, playground"
 
 public enum SlotStatus : String {
     case due = "due"
@@ -221,6 +220,13 @@ public struct Schedule {
 		}
         return nil
     }
+	
+	
+	/// 
+	public func update(with scores: [Double]?) {
+		
+		
+	}
     
     
     
