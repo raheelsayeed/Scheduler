@@ -88,14 +88,25 @@ public struct Slot {
 public struct Schedule {
     
     
+    let calendar = PROCalender.shared.calender
+    
     /// Today's date
     let now = Date()
     
     /// Calculated or set value
-    let period : PeriodBound?
+    let periodBound : PeriodBound?
     
     /// Slots available for PRO Measurement
     let slots : [Slot]?
+    
+    
+    /// number of slots
+    var slotCount : Int {
+        get  {
+            if let slots = slots { return slots.count }
+            else { return  0 }
+        }
+    }
     
     
     /// Frequency of a repeating measurement
@@ -124,11 +135,9 @@ public struct Schedule {
     
     init(period: PeriodBound, freq: Frequency) {
         self.instant = false
-        self.period = period
+        self.periodBound = period
         self.frequency = freq
         self.slots = nil
-        
-        
     }
     
     private func configureSlots() {
@@ -140,6 +149,21 @@ public struct Schedule {
                 return pComponents
             }
         }
+        
+        var slotCount : Int? {
+            get {
+                if let start = periodBound?.start, let end = periodBound?.end {
+                    let differenceComponents = calendar.dateComponents([.day], from: start, to:end)
+                    return (differenceComponents.day! / frequency!.value)
+                }
+                else {
+                    return 0
+                }
+            }
+        }
+        
+        let numberOfSlots = slotCount
+        
         
         
     }
