@@ -65,7 +65,14 @@ public struct PeriodBound : Equatable {
 public struct Frequency {
     let value   : Int
     let unit    : String
-    // convert to granular period (F)
+	let unitDays  : Int
+	
+	init(value: Int, unit: String) {
+		self.value = value
+		self.unit  = unit
+		self.unitDays = (unit == "wk") ? 7 : 1
+	}
+	
     
 }
 
@@ -73,13 +80,15 @@ public struct Frequency {
 
 
 public struct Slot {
-    
+	
     let period : PeriodBound
     let status : SlotStatus = .unknown
     var current: Bool = false
     
     init(period: PeriodBound) {
+		let now 	= Date()
         self.period = period
+		self.current = period.contains(now)
     }
     
 }
@@ -94,10 +103,10 @@ public struct Schedule {
     let now = Date()
     
     /// Calculated or set value
-    let periodBound : PeriodBound?
+	var periodBound : PeriodBound?
     
     /// Slots available for PRO Measurement
-    let slots : [Slot]?
+	var slots : [Slot]?
     
     
     /// number of slots
@@ -116,17 +125,47 @@ public struct Schedule {
     var currentStatus : SlotStatus? {
         get { return currentSlot?.status }
     }
-    
+	
+	/// for Internal use, current slot index in slots.array
+	public internal(set) var currentSlotIndex = -1
+	
+	
+	/// next Slot
+	public var nextSlot : Slot? {
+		get {
+			guard let slots = slots, currentSlotIndex < slots.endIndex else { return nil }
+			let nextIdx = slots.index(after: currentSlotIndex)
+			return slots[nextIdx]
+		}
+	}
+	
+	/// Previous Slot
+	public var previousSlot : Slot? {
+		get {
+			guard let slots = slots, currentSlotIndex > slots.startIndex else { return nil }
+			let nextIdx = slots.index(before: currentSlotIndex)
+			return slots[nextIdx]
+		}
+	}
+
+	
     /// Current slot, based on `now`: today's date
-    var currentSlot : Slot? {
-        get {
-            if let slots = slots { return slots.last }
-            return nil
-        }
-        set {
-            currentSlot = slots?.last
-        }
-    }
+	var currentSlot : Slot? {
+		get {
+			guard let slots = slots else {
+				return nil
+			}
+			for slot in slots {
+				if slot.current { return slot }
+			}
+			return nil
+		}
+	}
+	
+	
+	
+	
+	
     
     
     /// Measurement is instant if no repeating schedule available
@@ -137,35 +176,53 @@ public struct Schedule {
         self.instant = false
         self.periodBound = period
         self.frequency = freq
-        self.slots = nil
+		self.slots = configureSlots()
     }
-    
-    private func configureSlots() {
-        
-        var  periodComponents : DateComponents {
-            get {
-                var pComponents = DateComponents()
-                pComponents.day = (frequency!.value - 1)
-                return pComponents
-            }
-        }
+	
+	
+	
+	
+    /// Requires repeating elements `PeriodBound` and `Frequency`
+	mutating func configureSlots() -> [Slot]? {
+		
+		guard let period = periodBound, let frequency = frequency else {
+			return nil
+		}
+		
+		var periodComponents = DateComponents()
+		periodComponents.day = (frequency.unitDays - 1)
+		
+		
         
         var slotCount : Int? {
             get {
-                if let start = periodBound?.start, let end = periodBound?.end {
+
                     let differenceComponents = calendar.dateComponents([.day], from: start, to:end)
-                    return (differenceComponents.day! / frequency!.value)
-                }
-                else {
-                    return 0
-                }
+                    return (differenceComponents.day! / frequency.unitDays)
             }
         }
-        
-        let numberOfSlots = slotCount
-        
-        
-        
+		
+		if let slotCount = slotCount {
+			//Create Slots
+			var startSlotDate	= Date()
+			var endSlotDate		= Date()
+			var newSlots		= [Slot]()
+			
+			for i in 1...slotCount {
+				startSlotDate = (i == 1) ? period.start : endSlotDate.addDays(days: 1)
+				endSlotDate = startSlotDate.addDays(days: frequency.unitDays - 1)
+				
+				let slotPeriod = PeriodBound.init(startSlotDate, endSlotDate)
+				let slot = Slot(period: slotPeriod)
+				if slot.current {
+					currentSlotIndex = i-1
+				}
+				
+				newSlots.append(slot)
+			}
+			return newSlots
+		}
+        return nil
     }
     
     
@@ -207,8 +264,11 @@ class PROCalender {
 }
 
 
+
+
 extension Date {
-    
+	
+	
     private static let dateFormat: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEEE, MMMM dd, yyyy"
@@ -219,6 +279,11 @@ extension Date {
     public var shortDate : String {
         return Date.dateFormat.string(from: self)
     }
+	
+	func addDays(days: Int) -> Date {
+		let calender = PROCalender.shared.calender
+		return calender.date(byAdding: .day, value: days, to: self)!
+	}
 }
 
 
